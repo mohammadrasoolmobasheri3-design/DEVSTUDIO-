@@ -1,0 +1,63 @@
+name: DevStudio Android Debug APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract project ZIP
+        run: |
+          mkdir -p extracted
+          unzip -q DevStudio_V12_1_github-actions-trial.zip -d extracted
+
+          GRADLEW="$(find extracted -type f -name gradlew -print -quit)"
+          if [ -z "$GRADLEW" ]; then
+            echo "Could not find gradlew in the ZIP archive"
+            exit 1
+          fi
+
+          PROJECT_DIR="$(dirname "$GRADLEW")"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-29" "build-tools;29.0.3"
+
+      - name: Set up Java 8 for Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Build debug APK
+        run: |
+          cd "$PROJECT_DIR"
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace assembleDebug
+
+          mkdir -p "$GITHUB_WORKSPACE/output"
+          cp app/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/output/"
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevStudio-debug-apk
+          path: output/*.apk
+          if-no-files-found: error
+          retention-days: 7
