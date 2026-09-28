@@ -17,16 +17,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract project ZIP
+            - name: Extract project ZIP
         run: |
           mkdir -p extracted
           unzip -q DevStudio_V12_1_github-actions-trial.zip -d extracted
-          GRADLEW="$(find extracted -type f -name gradlew -print -quit)"
+
+          echo "Searching for a valid Gradle project..."
+
+          GRADLEW=""
+          while IFS= read -r candidate; do
+            project="$(dirname "$candidate")"
+            if [ -f "$project/gradle/wrapper/gradle-wrapper.jar" ]; then
+              GRADLEW="$candidate"
+              PROJECT_DIR="$project"
+              break
+            fi
+          done < <(find extracted -type f -name gradlew)
+
           if [ -z "$GRADLEW" ]; then
-            echo "Could not find gradlew in the ZIP archive"
+            echo "Could not find gradlew with its wrapper JAR"
+            find extracted -type f \( -name gradlew -o -name gradle-wrapper.jar \)
             exit 1
           fi
-          PROJECT_DIR="$(dirname "$GRADLEW")"
+
+          echo "Project directory: $PROJECT_DIR"
+          ls -l "$PROJECT_DIR/gradle/wrapper/"
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Set up Java 17 for Android SDK
