@@ -35,19 +35,24 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Check Java version for SDK
+        run: |
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: Install Android packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-29" "build-tools;29.0.3"
 
-      - name: Set up Java 8 for Gradle
+      - name: Set up Java 11 for Gradle
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '8'
+          java-version: '11'
 
       - name: Build debug APK
         run: |
